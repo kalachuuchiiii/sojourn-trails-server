@@ -10,9 +10,16 @@ const postSchema = new mongoose.Schema({
   postDesc: {
     type: String, 
   },
-  fileUrls: {
-    type: [String]
-  },
+  fileUrls: [
+    {
+      type: {
+        type: String
+      }, 
+      file: {
+        type: String
+      }
+    }
+    ],
   hasComments: {
     type: Boolean, 
     default: false

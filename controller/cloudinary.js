@@ -25,7 +25,10 @@ const urls = files.map(({file, type}) => {
          resource_type: type,
         transformation: type === 'image' ? imageTransform : vidTransform
       })
-      resolve(url);
+      resolve({
+        type, 
+        file: url 
+      });
     }catch(e){
       console.log(e); 
       reject(e);

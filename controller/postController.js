@@ -20,6 +20,7 @@ const uploadPost = async(req, res) => {
     })
     
   }catch(e){
+    console.log('post', e)
     return res.status(500).json({
     success: false, 
     message: e.message || 'Internal Server Error'
@@ -28,4 +29,24 @@ const uploadPost = async(req, res) => {
   }
 }
 
-module.exports = {uploadPost};
+const getAllPosts = async(req, res) => {
+  const { page } = req.params; 
+  const limit = 20;  
+  
+  try{
+    const allPosts = await Post.find({}).skip(page * limit).limit(limit).lean();
+    return res.status(200).json({
+      success: true, 
+      allPosts
+    })
+  }catch(e){
+    return res.status(500).json({
+    success: false, 
+    message: e.message || 'Internal Server Error'
+    });
+  }
+}
+
+
+
+module.exports = {uploadPost, getAllPosts};

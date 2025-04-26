@@ -226,6 +226,25 @@ const logout = async (req, res) => {
   }
 }
 
+const getUserById = async(req, res) => {
+  const { id } = req.params;  
+  
+  try{
+    const userInfo = await User.findById(id); 
+    return res.status(200).json({
+      success: true, 
+      userInfo
+    })
+    
+    
+    }catch(e){
+    return res.status(500).json({
+    success: true, 
+    message: e.message || 'Internal Server Error'
+    })
+    }
+}
+
 
 
 module.exports = {
@@ -233,5 +252,6 @@ module.exports = {
   register,
   login,
   checkSession,
-  logout
+  logout,
+  getUserById
 }
