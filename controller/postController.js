@@ -2,7 +2,7 @@ const { Post } = require("../models/postModel.js");
 const { uploadFiles } = require('./cloudinary.js');
 
 const uploadPost = async(req, res) => {
-  const { files, postDesc, postOf } = req.body?.format;
+  const { files, postDesc, postOf, rate} = req.body?.format;
   
   
   try{
@@ -11,7 +11,8 @@ const uploadPost = async(req, res) => {
     const newPost = new Post({
       postOf,
       fileUrls, 
-      postDesc
+      postDesc,
+      rate
     })
     await newPost.save(); 
     return res.status(200).json({
@@ -48,5 +49,58 @@ const getAllPosts = async(req, res) => {
 }
 
 
+const likePost = async(req, res) => {
+  const { postId } = req.params; 
+  const { likerId } = req.body; 
+  
+  if(!postId){
+    return res.status(404).json({
+      success: false, 
+      message: 'Post not found'
+    })
+  }
+  try{
+    const likePostRes = await Post.findByIdAndUpdate(postId, {
+      $addToSet: {
+        likes: likerId
+      }
+    }, {
+      new: true
+    })
+    return res.status(200).json({
+      success: true, 
+      likePostRes
+    })
+  }catch(e){
+    return res.status(500).json({
+    success: false, 
+    message: e.message || 'Internal Server Error'
+    });
+  }
+}
 
-module.exports = {uploadPost, getAllPosts};
+const dislikePost = async(req, res) => {
+  const { postId } = req.params; 
+  const { likerId } = req.body; 
+  
+  try{
+    const dislikePostRes = await Post.findByIdAndUpdate(postId, {
+      $pull: {
+        likes: likerId
+      }
+    }, {
+      new: true
+    })
+    return res.status(200).json({
+      success: true, 
+       dislikePostRes
+    })
+  }catch(e){
+    return res.status(500).json({
+    success: false, 
+    message: e.message || 'Internal Server Error'
+    });
+  }
+}
+
+module.exports = {uploadPost, getAllPosts, likePost, dislikePost};
