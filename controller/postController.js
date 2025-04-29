@@ -1,5 +1,6 @@
 const { Post } = require("../models/postModel.js"); 
 const { uploadFiles } = require('./cloudinary.js');
+const mongoose = require('mongoose');
 
 const uploadPost = async(req, res) => {
   const { files, postDesc, postOf, rate} = req.body?.format;
@@ -15,13 +16,13 @@ const uploadPost = async(req, res) => {
       rate
     })
     await newPost.save(); 
-    return res.status(200).json({
+    return res.status(201).json({
       success: true, 
       message: 'Uploaded successfully'
     })
     
   }catch(e){
-    console.log('post', e)
+    
     return res.status(500).json({
     success: false, 
     message: e.message || 'Internal Server Error'
@@ -35,7 +36,7 @@ const getAllPosts = async(req, res) => {
   const limit = 20;  
   
   try{
-    const allPosts = await Post.find({}).skip(page * limit).limit(limit).lean();
+    const allPosts = await Post.find({}).sort({createdAt:-1}).skip(page * limit).limit(limit).lean();
     return res.status(200).json({
       success: true, 
       allPosts
@@ -66,7 +67,7 @@ const likePost = async(req, res) => {
       }
     }, {
       new: true
-    })
+    }).lean();
     return res.status(200).json({
       success: true, 
       likePostRes
@@ -90,7 +91,7 @@ const dislikePost = async(req, res) => {
       }
     }, {
       new: true
-    })
+    }).lean()
     return res.status(200).json({
       success: true, 
        dislikePostRes
@@ -103,4 +104,26 @@ const dislikePost = async(req, res) => {
   }
 }
 
-module.exports = {uploadPost, getAllPosts, likePost, dislikePost};
+const getPostById = async(req, res) => {
+  const { postId } = req.params; 
+  if(!postId || !mongoose.Types.ObjectId.isValid(postId)){
+    return res.status(404).json({
+      success: false, 
+      message: 'Post not found'
+    })
+  }
+  try{
+    const post = await Post.findById(postId).lean(); 
+    return res.status(200).json({
+      success: true,
+      post
+    })
+  }catch(e){
+    return res.status(500).json({
+    success: false, 
+    message: e.message || 'Internal Server Error'
+    });
+  }
+}
+
+module.exports = {uploadPost, getAllPosts, likePost, dislikePost, getPostById};

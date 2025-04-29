@@ -20,10 +20,10 @@ const postSchema = new mongoose.Schema({
       }
     }
     ],
-  hasComments: {
-    type: Boolean, 
-    default: false
-  },
+    hasComments: {
+      type: Boolean, 
+      default: false
+    }, 
   likes: [{
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'user'
