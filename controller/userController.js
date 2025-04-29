@@ -34,7 +34,6 @@ The Sojourn Trails' Developer
       User.findOne({ username })
     ])
 
-    console.log(userWithThisUsername, userWithThisEmail)
     if (userWithThisUsername !== null) {
       return res.status(409).json({
         success: false,

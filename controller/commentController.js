@@ -3,22 +3,21 @@ const { Comment } = require('../models/commentModel.js');
 const { Post } = require('../models/postModel.js');
 
 const postComment = async(req, res) => {
-  const { toPost, text, author, isCommentToReplyHasReplies, replyTo, isPostToCommentHasComments } = req.body; 
+  const { toPost, text, author, replyTo, isTargetPostHasComments } = req.body; 
 
 
   try{
     const newComment = new Comment({toPost, text, author, replyTo}); 
     
-    const [postCom, updComToRepHasReplies, updPostHasComments] = await Promise.all([
-      newComment.save(), (replyTo && !isCommentToReplyHasReplies) && Comment.findByIdAndUpdate(replyTo, {
-        hasReplies: true
-      }), (toPost && !isPostToCommentHasComments) && Post.findByIdAndUpdate(toPost, {
+    const [postCom, updPostHasComments] = await Promise.all([
+      newComment.save(), (toPost && !isTargetPostHasComments) && Post.findByIdAndUpdate(toPost, {
         hasComments: true
       })
       ])
   
     return res.status(200).json({
-      success: true
+      success: true,
+      postCom
     })
   }catch(e){
     return res.status(500).json({
@@ -28,11 +27,70 @@ const postComment = async(req, res) => {
   }
 }
 
+const postReply = async(req, res) => {
+  const { replyTo, text, author, toPost, isTargetCommentHasReplies } = req.body; 
+  if(!replyTo || !mongoose.Types.ObjectId.isValid(replyTo)){
+    return res.status(404).json({
+      success: true, 
+      message: 'Comment not found'
+    })
+  }
+  
+  try{
+    
+    const newReply = new Comment({replyTo, text, author, toPost})
+    
+    const [newRep, updatedTargetComment] = await Promise.all([
+      newReply.save(), 
+      isTargetCommentHasReplies ? null : Comment.findByIdAndUpdate(replyTo, {
+        hasReplies: true
+      }, {new: true})
+      ])
+      
+      return res.status(200).json({
+        success: true, 
+        newRep,
+        updatedTargetComment
+      })
+    
+    }catch(e){
+    return res.status(500).json({
+    success: true, 
+    message: e.message || 'Internal Server Error'
+    })
+    }
+}
+
+const getRepliesOfComment = async(req, res) => {
+  const { commentId } = req.params; 
+  const { toPost, page } = req.query;
+  const limit = 7;
+  if(!toPost || !commentId || !mongoose.Types.ObjectId.isValid(commentId)){
+    return res.status(404).json({
+      success: false, 
+      message: 'Comment not found'
+    })
+  }
+  try{
+    const replies = await Comment.find({ toPost, replyTo: commentId }).skip(page * limit).limit(limit).lean();
+    return res.status(200).json({
+      success: true, 
+      replies
+    })
+    
+    }catch(e){
+    return res.status(500).json({
+    success: true, 
+    message: e.message || 'Internal Server Error'
+    })
+    }
+}
+
 const getCommentsOfPost = async(req, res) => {
   const {postId, page} = req.params;  
   const limit = 20;
   try{
-    const comments = await Comment.find({toPost: postId}).skip(page * limit).limit(limit)
+    const comments = await Comment.find({toPost: postId, replyTo: null}).skip(page * limit).limit(limit).sort({createdAt:-1})
     return res.status(200).json({
       success: true, 
       comments
@@ -45,13 +103,6 @@ const getCommentsOfPost = async(req, res) => {
   }
 }
 
-// (async function rem(){
-//   try{
-//    const h =  await Comment.deleteMany({});
-//    console.log(h)
-//   }catch(e){
-//     console.log(e)
-//   }
-// })()
 
-module.exports = { postComment, getCommentsOfPost }
+
+module.exports = { postComment, postReply, getCommentsOfPost, getRepliesOfComment }
