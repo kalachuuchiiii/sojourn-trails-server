@@ -3,7 +3,7 @@ const User = require('../models/userModel.js');
 const { sendEmailVerification, register,
 login, checkSession, logout, getUserById } = require('../controller/userController.js'); 
 const { uploadPost, getAllPosts, likePost, dislikePost, getPostById } = require("../controller/postController.js");
-const { postComment, getRepliesOfComment, postReply, getCommentsOfPost } = require('../controller/commentController.js');
+const { postComment, getRepliesOfComment, postReply, getCommentsOfPost, likeComment, dislikeComment } = require('../controller/commentController.js');
 const { compareEmailVerificationCode } = require('../middlewares/userMiddlewares.js');
 
 router.post('/send-otp', sendEmailVerification);
@@ -23,4 +23,6 @@ router.post('/post-comment', postComment);
 router.post('/post-reply', postReply);
 router.get('/get-comments-of-post/:postId/:page', getCommentsOfPost);
 router.get('/get-replies-of-comment/:commentId', getRepliesOfComment);
+router.post('/like-comment', likeComment);
+router.post('/dislike-comment', dislikeComment);
 module.exports = { router };

@@ -72,7 +72,7 @@ const getRepliesOfComment = async(req, res) => {
     })
   }
   try{
-    const replies = await Comment.find({ toPost, replyTo: commentId }).skip(page * limit).limit(limit).lean();
+    const replies = await Comment.find({ toPost, replyTo: commentId }).skip(page * limit).limit(limit).sort({createdAt: -1}).lean();
     return res.status(200).json({
       success: true, 
       replies
@@ -103,6 +103,58 @@ const getCommentsOfPost = async(req, res) => {
   }
 }
 
+const likeComment = async(req, res) => {
+  const { userId, commentId } = req.body; 
+  if(!userId || !mongoose.Types.ObjectId.isValid(userId)){
+    return res.status(404).json({
+      success: false, 
+      message: 'User not found'
+    })
+  }
+  try{
+   const likedComment = await Comment.findByIdAndUpdate(commentId, {
+      $addToSet: {
+        likes: userId
+      }
+    }, {new: true})
+    return res.status(200).json({
+      success: true, 
+      likedComment
+    })
+  }catch(e){
+    return res.status(500).json({
+    success: false, 
+    message: e.message || 'Internal Server Error'
+    });
+  }
+}
+
+const dislikeComment = async(req, res) => {
+  const { userId, commentId } = req.body; 
+  if(!userId || !mongoose.Types.ObjectId.isValid(userId)){
+    return res.status(404).json({
+      success: false, 
+      message: 'User not found'
+    })
+  }
+  try{
+   const dislikedComment = await Comment.findByIdAndUpdate(commentId, {
+      $pull: {
+        likes: userId
+      }
+    }, {new: true})
+    return res.status(200).json({
+      success: true, 
+      dislikedComment
+    })
+  }catch(e){
+    return res.status(500).json({
+    success: false, 
+    message: e.message || 'Internal Server Error'
+    });
+  }
+}
 
 
-module.exports = { postComment, postReply, getCommentsOfPost, getRepliesOfComment }
+
+module.exports = { postComment, postReply, getCommentsOfPost, getRepliesOfComment, likeComment, dislikeComment }
