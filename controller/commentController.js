@@ -90,10 +90,11 @@ const getCommentsOfPost = async(req, res) => {
   const {postId, page} = req.params;  
   const limit = 20;
   try{
-    const comments = await Comment.find({toPost: postId, replyTo: null}).skip(page * limit).limit(limit).sort({createdAt:-1})
+    const [comments, totalComments] = await Promise.all([ Comment.find({toPost: postId, replyTo: null}).skip(page * limit).limit(limit).sort({createdAt:-1}).lean(), Comment.find({toPost: postId, replyTo: null}).countDocuments().lean()])
     return res.status(200).json({
       success: true, 
-      comments
+      comments,
+      totalComments
     })
   }catch(e){
     return res.status(500).json({

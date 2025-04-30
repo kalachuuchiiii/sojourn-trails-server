@@ -36,9 +36,10 @@ const getAllPosts = async(req, res) => {
   const limit = 20;  
   
   try{
-    const allPosts = await Post.find({}).sort({createdAt:-1}).skip(page * limit).limit(limit).lean();
+    const [allPosts, totalPosts] = await Promise.all([ Post.find({}).sort({createdAt:-1}).skip(page * limit).limit(limit).lean(), Post.find({}).countDocuments() ]) 
     return res.status(200).json({
       success: true, 
+      totalPosts,
       allPosts
     })
   }catch(e){
@@ -125,5 +126,7 @@ const getPostById = async(req, res) => {
     });
   }
 }
+
+
 
 module.exports = {uploadPost, getAllPosts, likePost, dislikePost, getPostById};

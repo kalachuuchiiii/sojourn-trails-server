@@ -33,7 +33,7 @@ const postSchema = new mongoose.Schema({
     default: 1
   }
 }, {
-  timeStamps: true
+  timestamps: true
 })
 
 const Post = mongoose.model('Post', postSchema);
