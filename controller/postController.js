@@ -127,6 +127,30 @@ const getPostById = async(req, res) => {
   }
 }
 
+const getPostsOfUser = async(req, res) => {
+  const { userId, page } = req.params; 
+  if(!userId || !mongoose.Types.ObjectId.isValid(userId)){
+    return res.status(404).json({
+      success: false, 
+      message: "User not found"
+    })
+  }
+  try{
+    const limit = 10
+    const posts = await Post.find({postOf: userId}).sort({createdAt: -1}).skip(page * limit).limit(limit).lean();
+    return res.status(200).json({
+      success: true, 
+      posts
+    })
+  }catch(e){
+    return res.status(500).json({
+    success: false, 
+    message: e.message || 'Internal Server Error'
+    });
+  }
+}
 
 
-module.exports = {uploadPost, getAllPosts, likePost, dislikePost, getPostById};
+
+
+module.exports = {uploadPost, getAllPosts, likePost, dislikePost, getPostById, getPostsOfUser };

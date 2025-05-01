@@ -104,6 +104,8 @@ const getCommentsOfPost = async(req, res) => {
   }
 }
 
+
+
 const likeComment = async(req, res) => {
   const { userId, commentId } = req.body; 
   if(!userId || !mongoose.Types.ObjectId.isValid(userId)){
@@ -155,6 +157,7 @@ const dislikeComment = async(req, res) => {
     });
   }
 }
+
 
 
 

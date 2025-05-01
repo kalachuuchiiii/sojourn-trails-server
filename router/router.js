@@ -2,7 +2,7 @@ const router = require('express').Router();
 const User = require('../models/userModel.js');
 const { sendEmailVerification, register,
 login, checkSession, logout, getUserById } = require('../controller/userController.js'); 
-const { uploadPost, getAllPosts, likePost, dislikePost, getPostById } = require("../controller/postController.js");
+const { uploadPost, getAllPosts, likePost, dislikePost, getPostById, getPostsOfUser } = require("../controller/postController.js");
 const { postComment, getRepliesOfComment, postReply, getCommentsOfPost, likeComment, dislikeComment } = require('../controller/commentController.js');
 const { compareEmailVerificationCode } = require('../middlewares/userMiddlewares.js');
 
@@ -18,6 +18,7 @@ router.get('/get-posts/:page', getAllPosts);
 router.post('/like/:postId', likePost);
 router.post('/dislike/:postId', dislikePost);
 router.get('/get-post/:postId', getPostById);
+router.get('/get-posts-of-user/:userId/:page', getPostsOfUser);
 
 router.post('/post-comment', postComment);
 router.post('/post-reply', postReply);

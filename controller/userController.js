@@ -6,9 +6,10 @@ const mongoose = require('mongoose');
 
 const sendEmailVerification = async (req, res) => {
   const email = req.body.email.trim().toLowerCase();
-  const password = req.body.trim().toLowerCase();
-  const username = req.body.trim();
-
+  console.log(email)
+  
+  const username = req.body.username.trim();
+console.log(username)
   const code = Math.floor(Math.random() * 999999);
 
   const subject = 'Email Verification';
@@ -28,7 +29,7 @@ The Sojourn Trails' Developer
 
 
     const [emailResponse, redisResponse, userWithThisEmail, userWithThisUsername] = await Promise.all([
-      sendEmail({ email, subject, html }),
+      sendEmail({ to: email, subject, html }),
       redis.set(`otp:${email}`, code, { EX: 300 }),
       User.findOne({ email }),
       User.findOne({ username })
@@ -243,6 +244,7 @@ const getUserById = async(req, res) => {
     })
     }
 }
+
 
 
 
