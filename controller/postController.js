@@ -1,5 +1,6 @@
-const { Post } = require("../models/postModel.js"); 
+const Post  = require("../models/postModel.js"); 
 const { uploadFiles } = require('./cloudinary.js');
+const { notifyLikePost } = require('../controller/notificationController.js')
 const mongoose = require('mongoose');
 
 const uploadPost = async(req, res) => {
@@ -53,7 +54,7 @@ const getAllPosts = async(req, res) => {
 
 const likePost = async(req, res) => {
   const { postId } = req.params; 
-  const { likerId } = req.body; 
+  const { likerId, receiverId } = req.body; 
   
   if(!postId){
     return res.status(404).json({
@@ -62,16 +63,19 @@ const likePost = async(req, res) => {
     })
   }
   try{
-    const likePostRes = await Post.findByIdAndUpdate(postId, {
+   const likeAndNotify = await Promise.all([
+      Post.findByIdAndUpdate(postId, {
       $addToSet: {
         likes: likerId
       }
     }, {
       new: true
-    }).lean();
+    }).lean(), notifyLikePost({actor:likerId, message: "Liked your post", targetType: "post", targetId: postId, parentPostId: postId, receiverId })])
+    
+    
     return res.status(200).json({
-      success: true, 
-      likePostRes
+      success: true,
+      likeAndNotify
     })
   }catch(e){
     return res.status(500).json({

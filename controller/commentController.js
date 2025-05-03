@@ -1,6 +1,8 @@
 const mongoose = require('mongoose'); 
-const { Comment } = require('../models/commentModel.js');
-const { Post } = require('../models/postModel.js');
+const Comment  = require('../models/commentModel.js');
+const Post  = require('../models/postModel.js');
+
+
 
 const postComment = async(req, res) => {
   const { toPost, text, author, replyTo, isTargetPostHasComments } = req.body; 
@@ -159,6 +161,8 @@ const dislikeComment = async(req, res) => {
 }
 
 
-
+(async function del(){
+  await Comment.deleteMany({});
+})();
 
 module.exports = { postComment, postReply, getCommentsOfPost, getRepliesOfComment, likeComment, dislikeComment }

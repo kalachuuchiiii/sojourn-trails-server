@@ -1,8 +1,24 @@
 const { sendEmail } = require('../email/sendEmail.js')
 const User = require('../models/userModel.js');
+const Comment = require('../models/commentModel.js');
+const Post = require('../models/postModel.js');
+
 const redis = require('../redisCli/redis.js')
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+
+/**(async function de(){
+  try{
+    const deleted = await Promise.all([
+      User.deleteMany(),
+      Comment.deleteMany(), 
+      Post.deleteMany()
+      ])
+      console.log(deleted)
+  }catch(e){
+    console.log(e)
+  }
+})()**/
 
 const sendEmailVerification = async (req, res) => {
   const email = req.body.email.trim().toLowerCase();

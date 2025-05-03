@@ -7,8 +7,19 @@ const commentSchema = new mongoose.Schema({
     required: true
   }, 
   text: {
-    type: String, 
-    required: true
+    message: {
+      type: String, 
+      required: true
+    },
+    mention: {
+      type: String, 
+      default: null
+    },
+    receiverId: {
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'user',
+      default: null
+    }
   }, 
   replyTo: {
     type: mongoose.Schema.Types.ObjectId,
@@ -35,4 +46,4 @@ const commentSchema = new mongoose.Schema({
 
 const Comment = mongoose.model('Comment', commentSchema)
 
-module.exports = {Comment};
+module.exports = Comment
