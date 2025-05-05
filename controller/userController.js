@@ -1,6 +1,7 @@
 const { sendEmail } = require('../email/sendEmail.js')
 const User = require('../models/userModel.js');
 const Comment = require('../models/commentModel.js');
+const Notification = require("../models/notificationModel.js");
 const Post = require('../models/postModel.js');
 
 const redis = require('../redisCli/redis.js')
@@ -10,9 +11,10 @@ const mongoose = require('mongoose');
 /**(async function de(){
   try{
     const deleted = await Promise.all([
-      User.deleteMany(),
+      Notification.deleteMany(),
       Comment.deleteMany(), 
-      Post.deleteMany()
+      Post.deleteMany(),
+      
       ])
       console.log(deleted)
   }catch(e){
@@ -22,11 +24,11 @@ const mongoose = require('mongoose');
 
 const sendEmailVerification = async (req, res) => {
   const email = req.body.email.trim().toLowerCase();
-  console.log(email)
+  
   
   const username = req.body.username.trim();
-console.log(username)
-  const code = Math.floor(Math.random() * 999999);
+
+  const code = Math.floor(100000 + Math.random() * 999999);
 
   const subject = 'Email Verification';
   const html = `

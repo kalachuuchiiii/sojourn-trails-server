@@ -1,6 +1,6 @@
 const Post  = require("../models/postModel.js"); 
 const { uploadFiles } = require('./cloudinary.js');
-const { notifyLikePost } = require('../controller/notificationController.js')
+const { notifyLikePost, removeLikePostNotification } = require('../controller/notificationController.js')
 const mongoose = require('mongoose');
 
 const uploadPost = async(req, res) => {
@@ -70,8 +70,7 @@ const likePost = async(req, res) => {
       }
     }, {
       new: true
-    }).lean(), notifyLikePost({actor:likerId, message: "Liked your post", targetType: "post", targetId: postId, parentPostId: postId, receiverId })])
-    
+    }).lean(), receiverId !== likerId &&  notifyLikePost({actor:likerId, message: "Liked your post", targetType: "post", targetId: postId, parentPostId: postId, receiverId })])
     
     return res.status(200).json({
       success: true,
@@ -87,19 +86,20 @@ const likePost = async(req, res) => {
 
 const dislikePost = async(req, res) => {
   const { postId } = req.params; 
-  const { likerId } = req.body; 
+  const { likerId, receiverId } = req.body; 
   
   try{
-    const dislikePostRes = await Post.findByIdAndUpdate(postId, {
+    const dislikePostAndRemoveNotification = await Promise.all([Post.findByIdAndUpdate(postId, {
       $pull: {
         likes: likerId
       }
     }, {
       new: true
-    }).lean()
+    }).lean(), removeLikePostNotification({parentPostId: postId, actor: likerId, targetId: postId, receiverId})])
+    
     return res.status(200).json({
       success: true, 
-       dislikePostRes
+       dislikePostAndRemoveNotification
     })
   }catch(e){
     return res.status(500).json({
