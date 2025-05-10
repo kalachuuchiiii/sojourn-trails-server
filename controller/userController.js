@@ -3,7 +3,6 @@ const User = require('../models/userModel.js');
 const Comment = require('../models/commentModel.js');
 const Notification = require("../models/notificationModel.js");
 const Post = require('../models/postModel.js');
-
 const redis = require('../redisCli/redis.js')
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
@@ -14,7 +13,7 @@ const mongoose = require('mongoose');
       Notification.deleteMany(),
       Comment.deleteMany(), 
       Post.deleteMany(),
-      
+      User.deleteMany()
       ])
       console.log(deleted)
   }catch(e){
@@ -22,10 +21,11 @@ const mongoose = require('mongoose');
   }
 })()**/
 
-const sendEmailVerification = async (req, res) => {
+
+exports.sendEmailVerification = async (req, res) => {
   const email = req.body.email.trim().toLowerCase();
-  
-  
+
+
   const username = req.body.username.trim();
 
   const code = Math.floor(100000 + Math.random() * 999999);
@@ -49,8 +49,8 @@ The Sojourn Trails' Developer
     const [emailResponse, redisResponse, userWithThisEmail, userWithThisUsername] = await Promise.all([
       sendEmail({ to: email, subject, html }),
       redis.set(`otp:${email}`, code, { EX: 300 }),
-      User.findOne({ email }),
-      User.findOne({ username })
+      User.findOne({ email }).select("-password").lean(),
+      One({ username }).select("-password").lean()
     ])
 
     if (userWithThisUsername !== null) {
@@ -88,7 +88,7 @@ The Sojourn Trails' Developer
   }
 }
 
-const register = async (req, res) => {
+exports.register = async (req, res) => {
   const { username, password, email } = req.body;
   try {
     const userAcc = new User({ username, password, email });
@@ -107,7 +107,7 @@ const register = async (req, res) => {
   }
 }
 
-const login = async (req, res) => {
+exports.login = async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(404).json({
@@ -133,24 +133,19 @@ const login = async (req, res) => {
       })
     }
     const prevIdToken = req.cookies?.idToken;
-    if (prevIdToken) {
-      const { _id } = await jwt.verify(prevIdToken, process.env.JWT_SECRET);
-      const redix = await redis.del(`user:${_id}`);
-      console.log('deleted prev session',redix)
-    }
+
     res.clearCookie('idToken', {
       httpOnly: true,
       sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
       secure: process.env.NODE_ENV === 'production',
     })
     const userToken = await jwt.sign({ user }, process.env.JWT_SECRET, { expiresIn: '30d' })
-    
+
     const idToken = await jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
       expiresIn: '30d'
     })
     const thirtyDays = (((60 * 60) * 24) * 30)
     //cache userdata
-    await redis.set(`user:${user._id}`, userToken, { EX: thirtyDays });
     //store sessionToken
     res.cookie('idToken', idToken, {
       httpOnly: true,
@@ -173,7 +168,7 @@ const login = async (req, res) => {
   }
 }
 
-const checkSession = async (req, res) => {
+exports.checkSession = async (req, res) => {
   try {
     const idToken = req.cookies?.idToken;
     if (!idToken) {
@@ -185,17 +180,8 @@ const checkSession = async (req, res) => {
     }
     //id of the user in curr session
     const { _id } = await jwt.verify(idToken, process.env.JWT_SECRET);
-    const userToken = await redis.get(`user:${_id}`);
-    if (!userToken) {
-      return res.status(404).json({
-        success: true,
-        message: 'No session found',
-        authenticated: false
-      })
-    }
-   //cached user data of the curr session 
-    const { user } = await jwt.verify(userToken, process.env.JWT_SECRET);
-    const { password, ...userInfo } = user;
+    //cached user data of the curr session 
+    const userInfo = await User.findById(_id).select("-password").lean()
 
     return res.status(200).json({
       success: true,
@@ -211,7 +197,7 @@ const checkSession = async (req, res) => {
   }
 }
 
-const logout = async (req, res) => {
+exports.logout = async (req, res) => {
   const { _id } = req.body;
   if (!_id || !mongoose.Types.ObjectId.isValid(_id)) {
     return res.status(400).json({
@@ -223,7 +209,6 @@ const logout = async (req, res) => {
 
   try {
 
-    const redisRes = await redis.del(`user:${_id}`);
     const cookieRes = res.clearCookie('idToken', {
       httpOnly: true,
       sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
@@ -244,33 +229,21 @@ const logout = async (req, res) => {
   }
 }
 
-const getUserById = async(req, res) => {
-  const { id } = req.params;  
-  
-  try{
-    const userInfo = await User.findById(id); 
+exports.getUserById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const userInfo = await User.findById(id).select("-password -__v").lean();
     return res.status(200).json({
-      success: true, 
+      success: true,
       userInfo
     })
-    
-    
-    }catch(e){
+
+
+  } catch (e) {
     return res.status(500).json({
-    success: true, 
-    message: e.message || 'Internal Server Error'
+      success: false,
+      message: e.message || 'Internal Server Error'
     })
-    }
-}
-
-
-
-
-module.exports = {
-  sendEmailVerification,
-  register,
-  login,
-  checkSession,
-  logout,
-  getUserById
+  }
 }

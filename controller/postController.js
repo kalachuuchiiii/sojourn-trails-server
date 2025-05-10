@@ -1,6 +1,9 @@
-const Post  = require("../models/postModel.js"); 
+const Post  = require("../models/postModel.js");
+const Notification = require("../models/notificationModel.js");
+const Comment = require("../models/commentModel.js")
 const { uploadFiles } = require('./cloudinary.js');
-const { notifyLikePost, removeLikePostNotification } = require('../controller/notificationController.js')
+const { notifyLikePost, removeLikerNotif } = require('../controller/notificationController.js')
+
 const mongoose = require('mongoose');
 
 const uploadPost = async(req, res) => {
@@ -54,7 +57,7 @@ const getAllPosts = async(req, res) => {
 
 const likePost = async(req, res) => {
   const { postId } = req.params; 
-  const { likerId, receiverId } = req.body; 
+  const { likerId, recipient } = req.body; 
   
   if(!postId){
     return res.status(404).json({
@@ -70,7 +73,7 @@ const likePost = async(req, res) => {
       }
     }, {
       new: true
-    }).lean(), receiverId !== likerId &&  notifyLikePost({actor:likerId, message: "Liked your post", targetType: "post", targetId: postId, parentPostId: postId, receiverId })])
+    }).lean(), recipient !== likerId &&  notifyLikePost({sender:likerId, targetId: postId, parentPostId: postId, recipient })])
     
     return res.status(200).json({
       success: true,
@@ -86,7 +89,7 @@ const likePost = async(req, res) => {
 
 const dislikePost = async(req, res) => {
   const { postId } = req.params; 
-  const { likerId, receiverId } = req.body; 
+  const { likerId, recipient } = req.body; 
   
   try{
     const dislikePostAndRemoveNotification = await Promise.all([Post.findByIdAndUpdate(postId, {
@@ -95,7 +98,7 @@ const dislikePost = async(req, res) => {
       }
     }, {
       new: true
-    }).lean(), removeLikePostNotification({parentPostId: postId, actor: likerId, targetId: postId, receiverId})])
+    }).lean(), removeLikerNotif({ sender: likerId, targetId: postId})])
     
     return res.status(200).json({
       success: true, 
@@ -141,10 +144,11 @@ const getPostsOfUser = async(req, res) => {
   }
   try{
     const limit = 10
-    const posts = await Post.find({postOf: userId}).sort({createdAt: -1}).skip(page * limit).limit(limit).lean();
+    const [posts, totalPosts] = await Promise.all([Post.find({postOf: userId}).sort({createdAt: -1}).skip(page * limit).limit(limit).lean(), Post.find({postOf: userId}).countDocuments().lean() ])
     return res.status(200).json({
       success: true, 
-      posts
+      posts,
+      totalPosts
     })
   }catch(e){
     return res.status(500).json({
@@ -154,7 +158,32 @@ const getPostsOfUser = async(req, res) => {
   }
 }
 
+const deletePostById = async(req, res) => {
+  const { postId } = req.params; 
+  try{
+    
+    const [deletedPost, deletedNotif, deletedComment] = await Promise.all([ Post.findByIdAndDelete(postId), 
+    Notification.deleteMany({ parentPostId: postId }), 
+    Comment.deleteMany({ toPost: postId})
+    ])
+    
+    
+    return res.status(200).json({
+      success: true, 
+      deletedPost,
+      deletedComment,
+      deletedNotif
+    })
+    
+    }catch(e){
+    return res.status(500).json({
+    success: true, 
+    message: e.message || 'Internal Server Error'
+    })
+    }
+}
 
 
 
-module.exports = {uploadPost, getAllPosts, likePost, dislikePost, getPostById, getPostsOfUser };
+
+module.exports = {uploadPost, getAllPosts, likePost, dislikePost, getPostById, getPostsOfUser, deletePostById};

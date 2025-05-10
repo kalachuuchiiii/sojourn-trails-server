@@ -19,10 +19,6 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'post'
   },
-  dreamList: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'post'
-    }],
   password: {
     type: String,
     required: true,
@@ -41,28 +37,15 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  friends: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'user'
-  }],
-  sentRequests: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'user'
-  }],
-  friendRequests: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'user'
-  }],
+  online: {
+    type: Boolean,
+    default: false
+  },
+  interests: [String],
   icon: {
     type: String,
     default: 'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
-  },
-  communities: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'community'
-    }
-  ]
+  }
 }, {
   timestamps: true
 })

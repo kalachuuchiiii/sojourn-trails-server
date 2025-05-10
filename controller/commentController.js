@@ -1,11 +1,11 @@
 const mongoose = require('mongoose');
 const Comment = require('../models/commentModel.js');
 const Post = require('../models/postModel.js');
-const { notifyCommentOnPost } = require("../controller/notificationController.js");
+const { notifyCommentOnPost, removeLikerNotif, notifyLikeComment, notifyReply } = require("../controller/notificationController.js");
 
 
 const postComment = async (req, res) => {
-  const { toPost, text, author, replyTo, isTargetPostHasComments, receiverId } = req.body;
+  const { toPost, text, author, replyTo, isTargetPostHasComments, recipient } = req.body;
 
 
   try {
@@ -16,7 +16,7 @@ const postComment = async (req, res) => {
         hasComments: true
       })
     ])
-    const notifyNewComment = await notifyCommentOnPost({ receiverId, actor: author, targetId: postCom._id, parentPostId: toPost })
+    const notifyNewComment = await notifyCommentOnPost({ recipient, sender: author, targetId: postCom._id, parentPostId: toPost })
 
     return res.status(200).json({
       success: true,
@@ -32,7 +32,7 @@ const postComment = async (req, res) => {
 }
 
 const postReply = async (req, res) => {
-  const { replyTo, text, author, toPost, isTargetCommentHasReplies } = req.body;
+  const { replyTo, notifRecipient, text, author, toPost, isTargetCommentHasReplies } = req.body;
   if (!replyTo || !mongoose.Types.ObjectId.isValid(replyTo)) {
     return res.status(404).json({
       success: true,
@@ -50,11 +50,13 @@ const postReply = async (req, res) => {
         hasReplies: true
       }, { new: true })
     ])
+    const notifReplyResponse = await notifyReply({sender: author, recipient: notifRecipient, targetId: replyTo, replyId: newRep._id,  parentPostId: toPost})
 
     return res.status(200).json({
       success: true,
       newRep,
-      updatedTargetComment
+      updatedTargetComment,
+      notifReplyResponse
     })
 
   } catch (e) {
@@ -66,17 +68,15 @@ const postReply = async (req, res) => {
 }
 
 const getRepliesOfComment = async (req, res) => {
-  const { commentId } = req.params;
-  const { toPost, page } = req.query;
+ const options = JSON.parse(req.query.options)
+ 
+ const { replyTo, excludeId } = options;
+ const page = 0;
   const limit = 7;
-  if (!toPost || !commentId || !mongoose.Types.ObjectId.isValid(commentId)) {
-    return res.status(404).json({
-      success: false,
-      message: 'Comment not found'
-    })
-  }
+  console.log(options, replyTo, excludeId)
+ 
   try {
-    const replies = await Comment.find({ toPost, replyTo: commentId }).skip(page * limit).limit(limit).sort({ createdAt: -1 }).lean();
+    const replies = await Comment.find(options).skip(page * limit).limit(limit).sort({ createdAt: -1 }).lean();
     return res.status(200).json({
       success: true,
       replies
@@ -119,22 +119,27 @@ const getCommentsOfPost = async (req, res) => {
 
 
 const likeComment = async (req, res) => {
-  const { userId, commentId } = req.body;
-  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+  const { userId, commentId, notifReceiver, parentPostId, parentComment } = req.body;
+  console.log("parent",parentComment )
+  const liker = userId;
+  if (!liker || !mongoose.Types.ObjectId.isValid(liker)) {
     return res.status(404).json({
       success: false,
       message: 'User not found'
     })
   }
   try {
-    const likedComment = await Comment.findByIdAndUpdate(commentId, {
+    const likeAndNotify = await Promise.all([Comment.findByIdAndUpdate(commentId, {
       $addToSet: {
-        likes: userId
+        likes: liker
       }
-    }, { new: true })
+    }, { new: true }),
+    notifyLikeComment({sender: liker, parentComment, targetId: parentComment ? parentComment : commentId, replyId: parentComment ? commentId : null, recipient: notifReceiver, parentPostId})
+    ])
+    
     return res.status(200).json({
       success: true,
-      likedComment
+      liker
     })
   } catch (e) {
     return res.status(500).json({
@@ -145,7 +150,7 @@ const likeComment = async (req, res) => {
 }
 
 const dislikeComment = async (req, res) => {
-  const { userId, commentId } = req.body;
+  const { userId, commentId, notifReceiver } = req.body;
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
     return res.status(404).json({
       success: false,
@@ -153,14 +158,14 @@ const dislikeComment = async (req, res) => {
     })
   }
   try {
-    const dislikedComment = await Comment.findByIdAndUpdate(commentId, {
+    const dislikeAndRemoveNotification = await Promise.all([ Comment.findByIdAndUpdate(commentId, {
       $pull: {
         likes: userId
       }
-    }, { new: true })
+    }, { new: true }), removeLikerNotif({sender: userId, targetId: commentId})])
     return res.status(200).json({
       success: true,
-      dislikedComment
+      disliker: userId
     })
   } catch (e) {
     return res.status(500).json({
@@ -193,9 +198,11 @@ const getOneCommentById = async (req, res) => {
 }
 
 const getCommentsOfAuthor = async(req, res) => {
-  const { authorId, postId } = req.params; 
+  const { authorId, postId, highlightId } = req.params; 
   try{
-    const authorComments = await Comment.find({author: authorId, toPost: postId}); 
+    const authorComments = await Comment.find({author: authorId, replyTo:null, toPost: postId, _id: {
+      $ne: highlightId === "null" ? null : highlightId
+    }}); 
     return res.status(200).json({
       success: true, 
       authorComments

@@ -5,10 +5,13 @@ const postSchema = new mongoose.Schema({
   postOf: {
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'user', 
+    index: true,
     required: true
   }, 
   postDesc: {
-    type: String, 
+    type: String,
+    index: true, 
+    required: true
   },
   viewers: {
     type: String,
